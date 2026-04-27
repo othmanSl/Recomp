@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Recomp Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --surface2: #1c1c1c;
+    --border: #2a2a2a; --steel: #2c5282; --steel-lt: #4a7db5;
+    --green: #276749; --green-lt: #38a169; --red: #9b2335; --red-lt: #e53e3e;
+    --text: #f0f0f0; --text-mid: #aaaaaa; --text-soft: #555555;
+    --mono: 'DM Mono', monospace; --head: 'Barlow Condensed', sans-serif; --body: 'Barlow', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; }
+
+  .nav { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+  .nav-tab { flex: 1; padding: 14px 4px 12px; font-family: var(--head); font-size: 13px; font-weight: 700;
+    letter-spacing: 0.06em; color: var(--text-soft); border: none; background: none; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .nav-tab.active { color: var(--steel-lt); border-bottom-color: var(--steel-lt); }
+
+  .view { display: none; padding: 14px 16px 100px; }
+  .view.active { display: block; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .topbar-title { font-family: var(--head); font-size: 22px; font-weight: 800; letter-spacing: 0.04em; }
+  .topbar-title span { color: var(--steel-lt); }
+  .week-toggle { font-family: var(--mono); font-size: 11px; background: var(--steel); color: white;
+    padding: 5px 12px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.06em; }
+
+  .day-tabs { display: flex; overflow-x: auto; gap: 5px; margin-bottom: 14px; scrollbar-width: none; }
+  .day-tabs::-webkit-scrollbar { display: none; }
+  .day-tab { flex-shrink: 0; font-family: var(--head); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.05em; padding: 6px 10px; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--surface); color: var(--text-mid); cursor: pointer; transition: all 0.15s; text-align:center; }
+  .day-tab.active { background: var(--steel); color: white; border-color: var(--steel); }
+  .day-tab.done { border-color: var(--green); color: var(--green-lt); }
+  .day-tab.done.active { background: var(--green); border-color: var(--green); color: white; }
+  .day-tab.rest-tab { border-color: var(--steel); color: var(--steel-lt); }
+
+  .session-hdr { border-left: 3px solid var(--steel); padding: 10px 12px; margin-bottom: 12px;
+    background: var(--surface); border-radius: 0 6px 6px 0; }
+  .session-hdr h2 { font-family: var(--head); font-size: 18px; font-weight: 800; letter-spacing: 0.04em; }
+  .session-hdr p { font-family: var(--mono); font-size: 9px; color: var(--text-soft); margin-top: 3px; letter-spacing: 0.06em; }
+  .session-rule { font-size: 11px; color: var(--steel-lt); margin-top: 6px; line-height: 1.5; }
+
+  .pills { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+  .pill { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 8px; text-align: center; }
+  .pill-val { font-family: var(--head); font-size: 20px; font-weight: 800; }
+  .pill-key { font-family: var(--mono); font-size: 8px; color: var(--text-soft); margin-top: 2px; letter-spacing: 0.05em; }
+
+  .ex-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  .ex-head { padding: 10px 12px 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .ex-name { font-family: var(--head); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; flex: 1; padding-right: 8px; line-height: 1.2; }
+  .ex-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .badge { font-family: var(--mono); font-size: 9px; background: var(--surface2); color: var(--text-mid); padding: 2px 6px; border-radius: 3px; }
+  .pflag { font-family: var(--head); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; }
+  .pflag-up   { background: rgba(39,103,73,0.3); color: var(--green-lt); }
+  .pflag-down { background: rgba(155,35,53,0.3); color: var(--red-lt); }
+  .pflag-same { background: var(--surface2); color: var(--text-soft); }
+
+  .ex-volbar { padding: 0 12px 8px; }
+  .vbt { height: 6px; background: var(--border); border-radius: 3px; position: relative; overflow: hidden; }
+  .vbp { height: 100%; background: var(--steel); opacity: 0.4; border-radius: 3px; position: absolute; left:0; }
+  .vbc { height: 100%; background: var(--green-lt); border-radius: 3px; position: absolute; left:0; transition: width 0.4s; }
+  .vbl { display: flex; justify-content: space-between; margin-top: 3px; }
+  .vbl span { font-family: var(--mono); font-size: 8px; }
+
+  .ex-cue { font-size: 10px; color: var(--text-soft); padding: 0 12px 8px; font-style: italic; line-height: 1.4; border-bottom: 1px solid var(--border); }
+
+  .sets-area { padding: 8px 12px 10px; }
+  .sets-hdr { display: grid; grid-template-columns: 26px 1fr 1fr 34px; gap: 5px; margin-bottom: 5px;
+    font-family: var(--mono); font-size: 9px; color: var(--text-soft); letter-spacing: 0.06em; text-transform: uppercase; }
+  .set-row { display: grid; grid-template-columns: 26px 1fr 1fr 34px; gap: 5px; margin-bottom: 5px; align-items: center; }
+  .set-num { font-family: var(--mono); font-size: 11px; color: var(--text-soft); text-align: center; line-height: 34px; }
+  .set-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); font-family: var(--mono); font-size: 14px; height: 34px; text-align: center;
+    width: 100%; -webkit-appearance: none; transition: border-color 0.15s; }
+  .set-input:focus { outline: none; border-color: var(--steel-lt); }
+  .set-input.filled { border-color: var(--green); color: var(--green-lt); }
+  .prev-hint { font-family: var(--mono); font-size: 8px; color: var(--steel-lt); text-align: center; margin-top: 1px; }
+  .set-done-btn { width: 34px; height: 34px; border-radius: 4px; border: 1px solid var(--border);
+    background: var(--surface2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s; }
+  .set-done-btn.checked { background: var(--green); border-color: var(--green); }
+
+  .complete-btn { width: 100%; padding: 14px; background: var(--steel); color: white; border: none;
+    border-radius: 8px; cursor: pointer; font-family: var(--head); font-size: 17px; font-weight: 800;
+    letter-spacing: 0.06em; margin-top: 14px; }
+  .complete-btn.done-state { background: var(--green); }
+
+  .rest-day { text-align: center; padding: 60px 24px; }
+  .rest-icon { font-size: 44px; margin-bottom: 10px; }
+  .rest-title { font-family: var(--head); font-size: 26px; font-weight: 800; color: var(--steel-lt); letter-spacing: 0.06em; }
+  .rest-sub { color: var(--text-mid); margin-top: 8px; font-size: 13px; line-height: 1.7; }
+
+  /* PROGRESS VIEW */
+  .prog-title { font-family: var(--head); font-size: 13px; font-weight: 800; letter-spacing: 0.06em;
+    color: var(--steel-lt); text-transform: uppercase; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 10px 10px; margin-bottom: 20px; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 100px; margin-bottom: 6px; }
+  .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .bar-pair { display: flex; gap: 2px; align-items: flex-end; width: 100%; justify-content: center; margin-bottom: 4px; }
+  .bar { border-radius: 3px 3px 0 0; min-height: 2px; width: 13px; }
+  .bar.w1 { background: var(--steel); opacity: 0.6; }
+  .bar.w2 { background: var(--green-lt); }
+  .chart-lbl { font-family: var(--mono); font-size: 8px; color: var(--text-soft); text-align: center; }
+  .chart-legend { display: flex; gap: 16px; justify-content: center; margin-top: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9px; color: var(--text-soft); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .comp-table th { font-family: var(--mono); font-size: 8px; color: var(--text-soft); letter-spacing: 0.07em;
+    padding: 6px 8px; background: var(--surface2); text-transform: uppercase; }
+  .comp-table th:not(:first-child) { text-align: right; }
+  .comp-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .comp-table td:not(:first-child) { text-align: right; font-family: var(--mono); }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .day-hdr td { background: var(--surface); font-family: var(--head); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.05em; padding: 8px; color: var(--text); }
+  .ex-lbl { font-family: var(--body); font-size: 11px; color: var(--text-mid); }
+  .c-prev { color: var(--steel-lt); }
+  .c-curr { color: var(--green-lt); font-weight: 500; }
+  .c-pos  { color: var(--green-lt); }
+  .c-neg  { color: var(--red-lt); }
+  .c-zero { color: var(--text-soft); }
+
+  .timer-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: var(--surface); border-top: 2px solid var(--steel);
+    padding: 10px 16px 18px; display: none; align-items: center; gap: 12px; }
+  .timer-bar.visible { display: flex; }
+  .timer-num { font-family: var(--head); font-size: 34px; font-weight: 800; color: var(--steel-lt); min-width: 65px; }
+  .timer-num.warn { color: var(--red-lt); }
+  .timer-lbl { font-family: var(--mono); font-size: 10px; color: var(--text-soft); }
+  .timer-prog { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .timer-fill { height: 100%; background: var(--steel); transition: width 1s linear; }
+  .timer-skip { font-family: var(--mono); font-size: 10px; color: var(--text-soft); background: none;
+    border: 1px solid var(--border); padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="nav-tab active" id="nt-log" onclick="switchNav('log',this)">📋  LOG</button>
+  <button class="nav-tab" id="nt-progress" onclick="switchNav('progress',this)">📈  PROGRESS</button>
+</div>
+
+<div id="view-log" class="view active"></div>
+<div id="view-progress" class="view"></div>
+
+<div class="timer-bar" id="timerBar">
+  <div><div class="timer-lbl">REST</div><div class="timer-num" id="timerNum">3:00</div></div>
+  <div class="timer-prog"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+  <button class="timer-skip" onclick="skipTimer()">SKIP ✕</button>
+</div>
+
+<script>
+const P = [
+  { id:0, label:"MON", name:"PULL", focus:"Lats · Mid-Back · Biceps",
+    rule:"Drive elbows DOWN on pulldown. Full extension on row. 3-sec lowering every rep.",
+    ex:[
+      { name:"Lat Pulldown",        sets:4, reps:"8-10",  rest:180, cue:"Drive elbows down — not bending arms. Feel lats, not biceps." },
+      { name:"Seated Cable Row",    sets:4, reps:"10-12", rest:180, cue:"Arms fully extended at start. Drive elbows past torso. Full ROM." },
+      { name:"DB Bicep Curl",       sets:3, reps:"10-12", rest:120, cue:"Supinate at top. Full extension at bottom. No swinging." },
+      { name:"DB Hammer Curl",      sets:3, reps:"12-15", rest:120, cue:"Neutral grip. Brachialis = arm thickness." },
+    ]},
+  { id:1, label:"TUE", name:"PUSH", focus:"Chest · Triceps",
+    rule:"Elbows at 75° from torso. If flat press causes pain: do incline only.",
+    ex:[
+      { name:"Incline DB Press 30°",  sets:4, reps:"8-10",  rest:180, cue:"30° only. Elbows 75° from torso. 3-sec lowering." },
+      { name:"Flat DB Press",         sets:3, reps:"10-12", rest:180, cue:"Skip if shoulder pain — do extra incline set instead." },
+      { name:"Cable Fly",             sets:3, reps:"12-15", rest:120, cue:"Fixed elbow bend. Move only at shoulder. 1-sec squeeze at peak." },
+      { name:"Cable Tricep Pushdown", sets:4, reps:"12-15", rest:120, cue:"Elbows pinned to sides. Flare rope at lockout. Full extension." },
+    ]},
+  { id:2, label:"WED", name:"LEGS", focus:"Quads · Hamstrings · Calves",
+    rule:"Stop 5° before lockout on leg press. 3-sec lowering on leg curl.",
+    ex:[
+      { name:"Leg Press",           sets:4, reps:"10-12", rest:180, cue:"Feet shoulder-width. Lower to 90°. Stop before lockout." },
+      { name:"Leg Curl",            sets:4, reps:"10-12", rest:180, cue:"Full ROM. Pause 1 sec at peak. 3-sec lowering." },
+      { name:"Leg Extension",       sets:3, reps:"12-15", rest:120, cue:"3-sec eccentric. Completes quad coverage." },
+      { name:"Standing Calf Raise", sets:4, reps:"15-20", rest:120, cue:"Full stretch at bottom — pause 1 sec. Non-negotiable." },
+    ]},
+  { id:3, label:"THU", name:"PULL", focus:"Lats · Mid-Back · Biceps",
+    rule:"Beat Monday: same weight, more reps.",
+    ex:[
+      { name:"Lat Pulldown",        sets:4, reps:"8-10",  rest:180, cue:"Beat Monday's reps. Drive elbows down." },
+      { name:"Seated Cable Row",    sets:4, reps:"10-12", rest:180, cue:"Beat Monday's reps. Full ROM, full squeeze." },
+      { name:"DB Bicep Curl",       sets:3, reps:"10-12", rest:120, cue:"Beat Monday. Supinate at top." },
+      { name:"DB Hammer Curl",      sets:3, reps:"12-15", rest:120, cue:"Beat Monday. Neutral grip, controlled." },
+    ]},
+  { id:4, label:"FRI", name:"PUSH", focus:"Chest · Triceps",
+    rule:"Beat Tuesday: same weight, more reps.",
+    ex:[
+      { name:"Incline DB Press 30°",  sets:4, reps:"8-10",  rest:180, cue:"Beat Tuesday. 30° only." },
+      { name:"Flat DB Press",         sets:3, reps:"10-12", rest:180, cue:"Beat Tuesday if shoulder allows." },
+      { name:"Cable Fly",             sets:3, reps:"12-15", rest:120, cue:"Beat Tuesday. Squeeze 1 sec at peak." },
+      { name:"Cable Tricep Pushdown", sets:4, reps:"12-15", rest:120, cue:"Beat Tuesday. Elbows pinned." },
+    ]},
+  { id:5, label:"SAT", name:"LEGS+ARMS", focus:"Legs (volume) · Biceps · Triceps",
+    rule:"Higher reps on legs. Curl → pushdown → rest → repeat.",
+    ex:[
+      { name:"Leg Press",             sets:3, reps:"12-15", rest:180, cue:"Higher reps than Wednesday. Same mechanics." },
+      { name:"Leg Curl",              sets:3, reps:"12-15", rest:120, cue:"Beat Wednesday weight if possible." },
+      { name:"DB Bicep Curl",         sets:3, reps:"12-15", rest:120, cue:"Full supination. Slow and deliberate." },
+      { name:"Cable Tricep Pushdown", sets:3, reps:"15-20", rest:120, cue:"Higher reps, pump focus. Elbows pinned." },
+      { name:"Standing Calf Raise",   sets:3, reps:"20",    rest:120, cue:"Close out the week. Full stretch every rep." },
+    ]},
+  { id:6, label:"SUN", name:"REST", focus:"Active Recovery", rule:"", ex:[], rest:true },
+];
+
+let st = JSON.parse(localStorage.getItem('recomp_v3')||'null') || { day:0, week:1, logs:{}, done:[] };
+const sv = () => localStorage.setItem('recomp_v3', JSON.stringify(st));
+const lk = (w,d,ei,s) => `w${w}d${d}e${ei}s${s}`;
+const gl = (w,d,ei,s) => st.logs[lk(w,d,ei,s)] || {};
+const sl = (w,d,ei,s,data) => { st.logs[lk(w,d,ei,s)]=data; sv(); };
+
+// Volume calc
+function exVol(w,d,ei,ns) {
+  let v=0;
+  for(let s=0;s<ns;s++){const l=gl(w,d,ei,s);v+=(parseFloat(l.lb)||0)*(parseFloat(l.reps)||0);}
+  return Math.round(v);
+}
+function sessVol(w,d) {
+  const day=P[d]; if(!day||day.rest) return 0;
+  return day.ex.reduce((sum,e,ei)=>sum+exVol(w,d,ei,e.sets),0);
+}
+function getFlag(w,d,ei,ns) {
+  if(w===1) return 'none';
+  const c=exVol(w,d,ei,ns),p=exVol(1,d,ei,ns);
+  if(!p||!c) return 'none';
+  return c>p?'up':c<p?'down':'same';
+}
+
+// Timer
+let tInt=null,tTotal=0,tLeft=0;
+function startTimer(sec){
+  clearInterval(tInt); tTotal=sec; tLeft=sec; drawTimer();
+  document.getElementById('timerBar').classList.add('visible');
+  tInt=setInterval(()=>{tLeft--;drawTimer();if(tLeft<=0)skipTimer();},1000);
+}
+function drawTimer(){
+  const m=Math.floor(tLeft/60),s=tLeft%60;
+  const el=document.getElementById('timerNum');
+  el.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  el.className='timer-num'+(tLeft<=10?' warn':'');
+  document.getElementById('timerFill').style.width=(tLeft/tTotal*100)+'%';
+}
+function skipTimer(){clearInterval(tInt);document.getElementById('timerBar').classList.remove('visible');}
+
+function switchNav(view,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  btn.classList.add('active');
+  if(view==='progress') renderProgress();
+}
+
+// ── LOG VIEW ──────────────────────────────────────────────────────────────────
+function renderLog(){
+  const el=document.getElementById('view-log');
+  const day=P[st.day], w=st.week;
+  const sk=`w${w}d${st.day}`;
+  const isDone=st.done.includes(sk);
+
+  // day tabs
+  const tabs=P.map((d,i)=>{
+    const k=`w${w}d${i}`;
+    let cls='day-tab';
+    if(st.day===i) cls+=' active';
+    if(st.done.includes(k)) cls+=' done';
+    if(d.rest) cls+=' rest-tab';
+    return `<button class="${cls}" onclick="selDay(${i})">${d.label}<br><span style="font-size:8px;opacity:0.7">${d.name.split(/[ +]/)[0]}</span></button>`;
+  }).join('');
+
+  let html=`
+    <div class="topbar">
+      <div class="topbar-title">RECOMP<span>.</span></div>
+      <button class="week-toggle" onclick="togWeek()">WEEK ${w} ⇄</button>
+    </div>
+    <div class="day-tabs">${tabs}</div>`;
+
+  if(day.rest){
+    html+=`<div class="rest-day">
+      <div class="rest-icon">💤</div>
+      <div class="rest-title">REST DAY</div>
+      <div class="rest-sub">Walk 45 min.<br>Stretch 20 min: chest, lats, hips, hamstrings.<br>Non-optional.</div>
+    </div>`;
+    el.innerHTML=html; return;
+  }
+
+  const sv_curr=sessVol(w,st.day);
+  const sv_prev=w===2?sessVol(1,st.day):0;
+  const diff=sv_prev>0?sv_curr-sv_prev:null;
+  const diffStr=diff===null?'—':diff>=0?`+${diff.toLocaleString()}`:diff.toLocaleString();
+  const diffColor=diff===null?'var(--text-soft)':diff>0?'var(--green-lt)':diff<0?'var(--red-lt)':'var(--text-mid)';
+  const totalSets=day.ex.reduce((a,e)=>a+e.sets,0);
+  let doneSets=0;
+  day.ex.forEach((e,ei)=>{for(let s=0;s<e.sets;s++)if(gl(w,st.day,ei,s).done)doneSets++;});
+
+  html+=`
+    <div class="pills">
+      <div class="pill"><div class="pill-val">${doneSets}/${totalSets}</div><div class="pill-key">SETS DONE</div></div>
+      <div class="pill"><div class="pill-val" style="font-size:${sv_curr>9999?14:17}px">${sv_curr>0?sv_curr.toLocaleString():'—'}</div><div class="pill-key">VOL (LB)</div></div>
+      <div class="pill"><div class="pill-val" style="font-size:15px;color:${diffColor}">${diffStr}</div><div class="pill-key">VS WK${w===2?'1':'—'}</div></div>
+    </div>
+    <div class="session-hdr">
+      <h2>${day.name}</h2><p>${day.focus}</p>
+      ${day.rule?`<div class="session-rule">→ ${day.rule}</div>`:''}
+    </div>`;
+
+  day.ex.forEach((ex,ei)=>{
+    const f=getFlag(w,st.day,ei,ex.sets);
+    const cv=exVol(w,st.day,ei,ex.sets);
+    const pv=w===2?exVol(1,st.day,ei,ex.sets):0;
+    const maxV=Math.max(cv,pv,1);
+    const cpct=Math.round(cv/maxV*100), ppct=Math.round(pv/maxV*100);
+    const fmap={up:`<div class="pflag pflag-up">▲ PR</div>`,down:`<div class="pflag pflag-down">▼ REGRESSED</div>`,same:`<div class="pflag pflag-same">= SAME</div>`,none:''};
+
+    let sets=`<div class="sets-area"><div class="sets-hdr"><div>#</div><div>LB</div><div>REPS</div><div></div></div>`;
+    for(let s=0;s<ex.sets;s++){
+      const log=gl(w,st.day,ei,s);
+      const prev=w===2?gl(1,st.day,ei,s):null;
+      const filled=(log.lb||log.reps)?' filled':'';
+      const checked=log.done?' checked':'';
+      sets+=`<div class="set-row">
+        <div class="set-num">${s+1}</div>
+        <div>
+          <input type="number" class="set-input${filled}" placeholder="lb" value="${log.lb||''}"
+            onchange="upd(${w},${st.day},${ei},${s},'lb',this.value)"
+            oninput="this.classList.toggle('filled',!!this.value);delayRender()">
+          ${prev&&prev.lb?`<div class="prev-hint">${prev.lb}lb</div>`:''}
+        </div>
+        <div>
+          <input type="number" class="set-input${filled}" placeholder="reps" value="${log.reps||''}"
+            onchange="upd(${w},${st.day},${ei},${s},'reps',this.value)"
+            oninput="this.classList.toggle('filled',!!this.value);delayRender()">
+          ${prev&&prev.reps?`<div class="prev-hint">${prev.reps}r</div>`:''}
+        </div>
+        <div><button class="set-done-btn${checked}" onclick="tickSet(${w},${st.day},${ei},${s},${ex.rest})">${log.done?'✓':''}</button></div>
+      </div>`;
+    }
+    sets+=`</div>`;
+
+    html+=`<div class="ex-card">
+      <div class="ex-head">
+        <div class="ex-name">${ex.name}</div>
+        <div class="ex-badges">
+          <div class="badge">${ex.sets}×${ex.reps} · ${ex.rest>=180?'3min':'2min'}</div>
+          ${fmap[f]}
+        </div>
+      </div>
+      ${cv>0||pv>0?`<div class="ex-volbar">
+        <div class="vbt">
+          ${pv>0?`<div class="vbp" style="width:${ppct}%"></div>`:''}
+          ${cv>0?`<div class="vbc" style="width:${cpct}%"></div>`:''}
+        </div>
+        <div class="vbl">
+          <span style="color:var(--green-lt)">${cv>0?cv.toLocaleString()+' lb':''}</span>
+          ${pv>0?`<span style="color:var(--steel-lt)">wk1: ${pv.toLocaleString()}</span>`:''}
+        </div>
+      </div>`:''}
+      <div class="ex-cue">${ex.cue}</div>
+      ${sets}
+    </div>`;
+  });
+
+  html+=`<button class="complete-btn${isDone?' done-state':''}" onclick="togDone('${sk}')">${isDone?'✓ SESSION COMPLETE':'MARK SESSION COMPLETE'}</button>`;
+  el.innerHTML=html;
+}
+
+// ── PROGRESS VIEW ─────────────────────────────────────────────────────────────
+function renderProgress(){
+  const el=document.getElementById('view-progress');
+  const training=P.filter(d=>!d.rest);
+  const w1v=training.map(d=>sessVol(1,d.id));
+  const w2v=training.map(d=>sessVol(2,d.id));
+  const maxV=Math.max(...w1v,...w2v,1);
+
+  const bars=training.map((d,i)=>{
+    const h1=Math.round(w1v[i]/maxV*90), h2=Math.round(w2v[i]/maxV*90);
+    return `<div class="chart-col">
+      <div class="bar-pair">
+        <div class="bar w1" style="height:${Math.max(h1,2)}px"></div>
+        <div class="bar w2" style="height:${Math.max(h2,2)}px;opacity:${w2v[i]>0?1:0.15}"></div>
+      </div>
+      <div class="chart-lbl">${d.label}</div>
+    </div>`;
+  }).join('');
+
+  let rows='';
+  training.forEach(day=>{
+    const sv1=sessVol(1,day.id), sv2=sessVol(2,day.id);
+    const svd=sv1>0&&sv2>0?sv2-sv1:null;
+    const svdStr=svd===null?'—':svd>=0?`+${svd.toLocaleString()}`:svd.toLocaleString();
+    const svdCls=svd===null?'c-zero':svd>0?'c-pos':svd<0?'c-neg':'c-zero';
+    rows+=`<tr class="day-hdr"><td colspan="4">${day.label} — ${day.name}
+      <span style="float:right;font-size:10px;font-weight:400;font-family:var(--mono)">
+        ${sv1>0?`<span style="color:var(--steel-lt)">${sv1.toLocaleString()}</span>`:''}
+        ${sv2>0?` → <span style="color:var(--green-lt)">${sv2.toLocaleString()}</span>`:''}
+        <span class="${svdCls}"> ${svdStr}</span>
+      </span>
+    </td></tr>`;
+    day.ex.forEach((ex,ei)=>{
+      const v1=exVol(1,day.id,ei,ex.sets), v2=exVol(2,day.id,ei,ex.sets);
+      const d=v1>0&&v2>0?v2-v1:null;
+      const ds=d===null?'—':d>=0?`+${d.toLocaleString()}`:d.toLocaleString();
+      const dc=d===null?'c-zero':d>0?'c-pos':d<0?'c-neg':'c-zero';
+      rows+=`<tr>
+        <td><div class="ex-lbl">${ex.name}</div></td>
+        <td class="c-prev">${v1>0?v1.toLocaleString():'—'}</td>
+        <td class="c-curr">${v2>0?v2.toLocaleString():'—'}</td>
+        <td class="${dc}">${ds}</td>
+      </tr>`;
+    });
+  });
+
+  el.innerHTML=`
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--head);font-size:22px;font-weight:800;letter-spacing:0.04em">
+        PROGRESS <span style="color:var(--steel-lt)">DASHBOARD</span></div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-soft);margin-top:3px">VOLUME = SETS × REPS × LB · GREEN = WEEK 2 · BLUE = WEEK 1</div>
+    </div>
+    <div class="prog-title">Session Volume — Week 1 vs Week 2</div>
+    <div class="chart-wrap">
+      <div class="chart-bars">${bars}</div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--steel);opacity:0.6"></div>Week 1</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green-lt)"></div>Week 2</div>
+      </div>
+    </div>
+    <div class="prog-title">Exercise-by-Exercise Breakdown</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px">
+      <table class="comp-table">
+        <thead><tr><th>Exercise</th><th>Wk 1</th><th>Wk 2</th><th>Diff</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function upd(w,d,ei,s,f,v){const l=gl(w,d,ei,s);l[f]=v;sl(w,d,ei,s,l);}
+function tickSet(w,d,ei,s,rest){const l=gl(w,d,ei,s);l.done=!l.done;sl(w,d,ei,s,l);if(l.done)startTimer(rest);renderLog();}
+function togDone(k){if(st.done.includes(k))st.done=st.done.filter(x=>x!==k);else st.done.push(k);sv();renderLog();}
+function selDay(i){st.day=i;sv();renderLog();}
+function togWeek(){st.week=st.week===1?2:1;sv();renderLog();}
+let rTimer=null;
+function delayRender(){clearTimeout(rTimer);rTimer=setTimeout(renderLog,400);}
+
+renderLog();
+</script>
+</body>
+</html>
