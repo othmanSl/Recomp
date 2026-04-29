@@ -166,12 +166,13 @@
 <script>
 const P = [
   { id:0, label:"MON", name:"PULL", focus:"Lats · Mid-Back · Biceps",
-    rule:"Drive elbows DOWN on pulldown. Full extension on row. 3-sec lowering every rep.",
+    rule:"Drive elbows DOWN on pulldown. Chest on pad for row. 3-sec lowering every rep.",
     ex:[
-      { name:"Lat Pulldown",        sets:4, reps:"8-10",  rest:180, cue:"Drive elbows down — not bending arms. Feel lats, not biceps." },
-      { name:"Seated Cable Row",    sets:4, reps:"10-12", rest:180, cue:"Arms fully extended at start. Drive elbows past torso. Full ROM." },
-      { name:"DB Bicep Curl",       sets:3, reps:"10-12", rest:120, cue:"Supinate at top. Full extension at bottom. No swinging." },
-      { name:"DB Hammer Curl",      sets:3, reps:"12-15", rest:120, cue:"Neutral grip. Brachialis = arm thickness." },
+      { name:"Lat Pulldown",              sets:4, reps:"8-10",  rest:180, cue:"Drive elbows down — not bending arms. Feel lats, not biceps." },
+      { name:"Chest-Supported Row",       sets:4, reps:"10-12", rest:180, cue:"Chest on pad — zero shoulder stress. Drive elbows back, squeeze blades at peak." },
+      { name:"Cable Pullover",            sets:3, reps:"12-15", rest:120, cue:"Arms straight, hinge only at shoulder. Pure lat stretch. No shoulder joint load." },
+      { name:"DB Bicep Curl",             sets:3, reps:"10-12", rest:120, cue:"Supinate at top. Full extension at bottom. No swinging." },
+      { name:"DB Hammer Curl",            sets:3, reps:"12-15", rest:120, cue:"Neutral grip. Brachialis = arm thickness." },
     ]},
   { id:1, label:"TUE", name:"PUSH", focus:"Chest · Triceps",
     rule:"Elbows at 75° from torso. If flat press causes pain: do incline only.",
@@ -190,12 +191,13 @@ const P = [
       { name:"Standing Calf Raise", sets:4, reps:"15-20", rest:120, cue:"Full stretch at bottom — pause 1 sec. Non-negotiable." },
     ]},
   { id:3, label:"THU", name:"PULL", focus:"Lats · Mid-Back · Biceps",
-    rule:"Beat Monday: same weight, more reps.",
+    rule:"Beat Monday: same weight, more reps on every exercise.",
     ex:[
-      { name:"Lat Pulldown",        sets:4, reps:"8-10",  rest:180, cue:"Beat Monday's reps. Drive elbows down." },
-      { name:"Seated Cable Row",    sets:4, reps:"10-12", rest:180, cue:"Beat Monday's reps. Full ROM, full squeeze." },
-      { name:"DB Bicep Curl",       sets:3, reps:"10-12", rest:120, cue:"Beat Monday. Supinate at top." },
-      { name:"DB Hammer Curl",      sets:3, reps:"12-15", rest:120, cue:"Beat Monday. Neutral grip, controlled." },
+      { name:"Lat Pulldown",              sets:4, reps:"8-10",  rest:180, cue:"Beat Monday. Drive elbows down." },
+      { name:"Chest-Supported Row",       sets:4, reps:"10-12", rest:180, cue:"Beat Monday. Chest on pad, drive elbows back." },
+      { name:"Cable Pullover",            sets:3, reps:"12-15", rest:120, cue:"Beat Monday. Arms straight, pure lat focus." },
+      { name:"DB Bicep Curl",             sets:3, reps:"10-12", rest:120, cue:"Beat Monday. Supinate at top." },
+      { name:"DB Hammer Curl",            sets:3, reps:"12-15", rest:120, cue:"Beat Monday. Neutral grip, controlled." },
     ]},
   { id:4, label:"FRI", name:"PUSH", focus:"Chest · Triceps",
     rule:"Beat Tuesday: same weight, more reps.",
@@ -335,14 +337,12 @@ function renderLog(){
         <div class="set-num">${s+1}</div>
         <div>
           <input type="number" class="set-input${filled}" placeholder="lb" value="${log.lb||''}"
-            onchange="upd(${w},${st.day},${ei},${s},'lb',this.value)"
-            oninput="this.classList.toggle('filled',!!this.value);delayRender()">
+            oninput="this.classList.toggle('filled',!!this.value);upd(${w},${st.day},${ei},${s},'lb',this.value)">
           ${prev&&prev.lb?`<div class="prev-hint">${prev.lb}lb</div>`:''}
         </div>
         <div>
           <input type="number" class="set-input${filled}" placeholder="reps" value="${log.reps||''}"
-            onchange="upd(${w},${st.day},${ei},${s},'reps',this.value)"
-            oninput="this.classList.toggle('filled',!!this.value);delayRender()">
+            oninput="this.classList.toggle('filled',!!this.value);upd(${w},${st.day},${ei},${s},'reps',this.value)">
           ${prev&&prev.reps?`<div class="prev-hint">${prev.reps}r</div>`:''}
         </div>
         <div><button class="set-done-btn${checked}" onclick="tickSet(${w},${st.day},${ei},${s},${ex.rest})">${log.done?'✓':''}</button></div>
@@ -451,8 +451,7 @@ function tickSet(w,d,ei,s,rest){const l=gl(w,d,ei,s);l.done=!l.done;sl(w,d,ei,s,
 function togDone(k){if(st.done.includes(k))st.done=st.done.filter(x=>x!==k);else st.done.push(k);sv();renderLog();}
 function selDay(i){st.day=i;sv();renderLog();}
 function togWeek(){st.week=st.week===1?2:1;sv();renderLog();}
-let rTimer=null;
-function delayRender(){clearTimeout(rTimer);rTimer=setTimeout(renderLog,400);}
+
 
 renderLog();
 </script>
